@@ -4,13 +4,14 @@ import { Send, X } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { FeedPost, timeAgo } from '@/lib/feed';
 import { useGuest } from './GuestProvider';
+import Avatar from './Avatar';
 
-type Comment = { id: string; comment_text: string; created_at: string; guest_name: string; table_number: string };
-const SELECT = 'id,comment_text,created_at,profiles(guest_name,table_number)';
+type Comment = { id: string; comment_text: string; created_at: string; guest_name: string; table_number: string; avatar_url: string | null };
+const SELECT = 'id,comment_text,created_at,profiles(guest_name,table_number,avatar_url)';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toComment = (r: any): Comment => ({
   id: r.id, comment_text: r.comment_text, created_at: r.created_at,
-  guest_name: r.profiles?.guest_name ?? 'Guest', table_number: r.profiles?.table_number ?? '',
+  guest_name: r.profiles?.guest_name ?? 'Guest', table_number: r.profiles?.table_number ?? '', avatar_url: r.profiles?.avatar_url ?? null,
 });
 
 export default function CommentModal({ post, onClose }: { post: FeedPost; onClose: () => void }) {
@@ -63,13 +64,16 @@ export default function CommentModal({ post, onClose }: { post: FeedPost; onClos
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
           {comments.length === 0 && <p className="pt-10 text-center font-display text-lg italic text-cocoa/50">Be the first to leave a kind word</p>}
           {comments.map((c) => (
-            <div key={c.id}>
-              <p className="text-xs">
-                <span className="font-semibold">{c.guest_name}</span>
-                {c.table_number && <span className="ml-1 text-ruby">· T{c.table_number}</span>}
-                <span className="ml-2 text-cocoa/40">{timeAgo(c.created_at)}</span>
-              </p>
-              <p className="mt-0.5 break-words text-sm">{c.comment_text}</p>
+            <div key={c.id} className="flex gap-2.5">
+              <Avatar url={c.avatar_url} name={c.guest_name} size={32} />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs">
+                  <span className="font-semibold">{c.guest_name}</span>
+                  {c.table_number && <span className="ml-1 text-ruby">· T{c.table_number}</span>}
+                  <span className="ml-2 text-cocoa/40">{timeAgo(c.created_at)}</span>
+                </p>
+                <p className="mt-0.5 break-words text-sm">{c.comment_text}</p>
+              </div>
             </div>
           ))}
           <div ref={bottom} />

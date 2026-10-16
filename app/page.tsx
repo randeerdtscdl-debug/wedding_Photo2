@@ -1,18 +1,22 @@
 'use client';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, ImageOff, Loader2, Sparkles } from 'lucide-react';
+import { Camera, Film, ImageOff, Loader2, Mic, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { FEED_SELECT, FeedPost, normalize } from '@/lib/feed';
 import { useGuest } from '@/components/GuestProvider';
 import Header from '@/components/Header';
 import FilterBar, { Sort } from '@/components/FilterBar';
 import PhotoCard from '@/components/PhotoCard';
+import VoiceCard from '@/components/VoiceCard';
+import VoiceModal from '@/components/VoiceModal';
+import LikesModal from '@/components/LikesModal';
 import PendingStrip from '@/components/PendingStrip';
 import UploadModal from '@/components/UploadModal';
 import CommentModal from '@/components/CommentModal';
 import OnboardingModal from '@/components/OnboardingModal';
 
 const PAGE_SIZE = 30;
+type Tab = 'media' | 'voice';
 
 function Feed() {
   const { profile } = useGuest();
@@ -26,7 +30,10 @@ function Feed() {
   const [hasMore, setHasMore] = useState(false);
   const [sort, setSort] = useState<Sort>('latest');
   const [table, setTable] = useState('');
+  const [tab, setTab] = useState<Tab>('media');
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const [likesPost, setLikesPost] = useState<FeedPost | null>(null);
   const [commentPost, setCommentPost] = useState<FeedPost | null>(null);
   const [notice, setNotice] = useState('');
   const noticeTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -127,24 +134,41 @@ function Feed() {
 
   const onUploaded = useCallback((p: FeedPost) => {
     setPending((prev) => (prev.some((x) => x.id === p.id) ? prev : [p, ...prev]));
-    showNotice('Thank you! Your upload is waiting for the hosts to approve it.');
+    showNotice(p.media_type === 'audio' ? 'Thank you! Your voice wish is waiting for the hosts to approve it.' : 'Thank you! Your upload is waiting for the hosts to approve it.');
   }, [showNotice]);
 
+  const isVoice = (p: FeedPost) => p.media_type === 'audio';
+  const tabPosts = useMemo(() => posts.filter((p) => (tab === 'voice') === isVoice(p)), [posts, tab]);
+  const counts = useMemo(() => ({ voice: posts.filter(isVoice).length, media: posts.filter((p) => !isVoice(p)).length }), [posts]);
+
   const tables = useMemo(
-    () => Array.from(new Set(posts.map((p) => p.table_number))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
-    [posts]);
+    () => Array.from(new Set(tabPosts.map((p) => p.table_number))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
+    [tabPosts]);
 
   const visible = useMemo(() => {
-    const list = table ? posts.filter((p) => p.table_number === table) : posts;
+    const list = table ? tabPosts.filter((p) => p.table_number === table) : tabPosts;
     return sort === 'liked'
       ? [...list].sort((a, b) => b.like_count - a.like_count || +new Date(b.created_at) - +new Date(a.created_at))
       : list;
-  }, [posts, sort, table]);
+  }, [tabPosts, sort, table]);
+
+  const tabCls = (on: boolean) =>
+    `flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition ${on ? 'bg-ruby-gradient text-gold-light shadow' : 'text-cocoa/70 hover:bg-parchment-100'}`;
 
   return (
     <>
       <Header />
       <main className="mx-auto max-w-5xl pb-28">
+        <div className="px-4 pt-3">
+          <div className="flex rounded-full border border-gold/50 bg-white p-1">
+            <button className={tabCls(tab === 'media')} onClick={() => { setTab('media'); setTable(''); }}>
+              <Film className="h-4 w-4" />Photos &amp; Videos <span className="text-xs opacity-70">{counts.media}</span>
+            </button>
+            <button className={tabCls(tab === 'voice')} onClick={() => { setTab('voice'); setTable(''); }}>
+              <Mic className="h-4 w-4" />Voice Wishes <span className="text-xs opacity-70">{counts.voice}</span>
+            </button>
+          </div>
+        </div>
         <FilterBar sort={sort} onSort={setSort} table={table} onTable={setTable} tables={tables} />
         <PendingStrip posts={pending} />
         <div className="px-4">
@@ -154,14 +178,22 @@ function Feed() {
             <div className="flex flex-col items-center gap-3 py-24 text-center text-cocoa/60">
               <ImageOff className="h-10 w-10 text-gold" />
               <p className="font-serif text-xl text-ruby">Nothing here yet</p>
-              <p className="font-display text-lg italic">Be the first to share a moment.</p>
+              <p className="font-display text-lg italic">{tab === 'voice' ? 'Be the first to leave a voice wish.' : 'Be the first to share a moment.'}</p>
             </div>
           ) : (
-            <div className="columns-2 gap-3 md:columns-3 md:gap-4">
-              {visible.map((p) => (
-                <PhotoCard key={p.id} post={p} liked={myLikes.has(p.id)} onLike={toggleLike} onComment={setCommentPost} />
-              ))}
-            </div>
+            tab === 'voice' ? (
+              <div className="mx-auto grid max-w-2xl gap-0">
+                {visible.map((p) => (
+                  <VoiceCard key={p.id} post={p} liked={myLikes.has(p.id)} onLike={toggleLike} onComment={setCommentPost} onShowLikes={setLikesPost} />
+                ))}
+              </div>
+            ) : (
+              <div className="columns-2 gap-3 md:columns-3 md:gap-4">
+                {visible.map((p) => (
+                  <PhotoCard key={p.id} post={p} liked={myLikes.has(p.id)} onLike={toggleLike} onComment={setCommentPost} onShowLikes={setLikesPost} />
+                ))}
+              </div>
+            )
           )}
           {hasMore && !loading && (
             <div className="mt-4 flex justify-center">
@@ -177,13 +209,16 @@ function Feed() {
         </div>
       )}
 
-      <button onClick={() => (profile ? setUploadOpen(true) : null)} aria-label="Upload photo or video"
+      <button onClick={() => (profile ? (tab === 'voice' ? setVoiceOpen(true) : setUploadOpen(true)) : null)}
+        aria-label={tab === 'voice' ? 'Record a voice wish' : 'Upload photo or video'}
         className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-5 z-40 flex h-16 w-16 items-center justify-center rounded-full bg-ruby-gradient text-gold-light shadow-xl shadow-ruby/40 ring-2 ring-gold active:scale-95">
-        <Camera className="h-7 w-7" />
+        {tab === 'voice' ? <Mic className="h-7 w-7" /> : <Camera className="h-7 w-7" />}
       </button>
 
       <OnboardingModal />
       {uploadOpen && <UploadModal onClose={() => setUploadOpen(false)} onUploaded={onUploaded} />}
+      {voiceOpen && <VoiceModal onClose={() => setVoiceOpen(false)} onUploaded={onUploaded} />}
+      {likesPost && <LikesModal post={likesPost} onClose={() => setLikesPost(null)} />}
       {commentPost && <CommentModal post={commentPost} onClose={() => setCommentPost(null)} />}
     </>
   );

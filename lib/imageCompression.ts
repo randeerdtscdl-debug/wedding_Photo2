@@ -40,3 +40,15 @@ async function addWatermark(blob: Blob, text: string): Promise<Blob> {
   }
   return (await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/jpeg', 0.6))) ?? blob;
 }
+
+/** Small square-friendly profile picture (<= ~150KB, max 400px). */
+export async function prepareAvatar(file: File): Promise<Blob> {
+  return imageCompression(file, {
+    maxSizeMB: 0.15,
+    maxWidthOrHeight: 400,
+    useWebWorker: true,
+    fileType: 'image/jpeg',
+    initialQuality: 0.8,
+    preserveExif: false,
+  });
+}

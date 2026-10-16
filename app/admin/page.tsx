@@ -1,15 +1,23 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, CheckCheck, Download, Loader2, LogOut, Lock, MessageCircle, Presentation, Trash2, Undo2, X } from 'lucide-react';
+import Avatar from '@/components/Avatar';
+import { Check, CheckCheck, Download, Loader2, LogOut, Lock, MessageCircle, Mic, Presentation, Trash2, Undo2, X } from 'lucide-react';
 
 type AdminComment = { id: string; comment_text: string; created_at: string; profiles: { guest_name: string } | null };
+type Guest = { id: string; guest_name: string; table_number: string; avatar_url: string | null; phone: string | null; created_at: string };
 type AdminPost = {
-  id: string; image_url: string; storage_path: string; caption: string | null; table_number: string;
-  media_type: 'image' | 'video'; is_approved: boolean; created_at: string;
-  profiles: { guest_name: string } | null; comments: AdminComment[];
+  id: string; user_id: string; duration_sec: number | null; image_url: string; storage_path: string; caption: string | null; table_number: string;
+  media_type: 'image' | 'video' | 'audio'; is_approved: boolean; created_at: string;
+  profiles: { guest_name: string; avatar_url: string | null } | null; comments: AdminComment[];
 };
 
 function Media({ p, className }: { p: AdminPost; className: string }) {
+  if (p.media_type === 'audio') return (
+    <div className="flex flex-col items-center justify-center gap-2 bg-parchment-50 p-4">
+      <Mic className="h-6 w-6 text-ruby" />
+      <audio src={p.image_url} controls preload="none" className="w-full" />
+    </div>
+  );
   return p.media_type === 'video'
     ? <video src={`${p.image_url}#t=0.1`} controls playsInline preload="metadata" className={`${className} bg-ruby-dark`} />
     // eslint-disable-next-line @next/next/no-img-element
@@ -21,7 +29,8 @@ export default function AdminPage() {
   const [password, setPassword] = useState('');
   const [loginErr, setLoginErr] = useState('');
   const [posts, setPosts] = useState<AdminPost[]>([]);
-  const [tab, setTab] = useState<'pending' | 'approved'>('pending');
+  const [guests, setGuests] = useState<Guest[]>([]);
+  const [tab, setTab] = useState<'pending' | 'approved' | 'guests'>('pending');
   const [open, setOpen] = useState<string | null>(null);
   const [zipMsg, setZipMsg] = useState('');
 
@@ -30,6 +39,7 @@ export default function AdminPage() {
     if (res.status === 401) return setAuthed(false);
     const json = await res.json();
     setPosts(json.posts ?? []);
+    setGuests(json.guests ?? []);
     setAuthed(true);
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -59,6 +69,15 @@ export default function AdminPage() {
     if (action === 'delete_post') setPosts((ps) => ps.filter((p) => p.id !== id));
     await fetch('/api/admin/moderate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, id }) });
     load();
+  }
+
+  function downloadCsv() {
+    const esc = (v: string | null) => `"${(v ?? '').replace(/"/g, '""')}"`;
+    const rows = [['Name', 'Table', 'Phone'], ...guests.map((g) => [g.guest_name, g.table_number, g.phone ?? ''])];
+    const blob = new Blob(['\ufeff' + rows.map((r) => r.map(esc).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'wedding-guests.csv'; a.click();
+    URL.revokeObjectURL(a.href);
   }
 
   async function downloadZip() {
@@ -124,6 +143,7 @@ export default function AdminPage() {
           <div className="flex rounded-full border border-gold/50 bg-white p-1">
             <button className={tabCls(tab === 'pending')} onClick={() => setTab('pending')}>Waiting ({pending.length})</button>
             <button className={tabCls(tab === 'approved')} onClick={() => setTab('approved')}>Approved ({approved.length})</button>
+            <button className={tabCls(tab === 'guests')} onClick={() => setTab('guests')}>Guests ({guests.length})</button>
           </div>
           {tab === 'pending' && pending.length > 1 && (
             <button className="btn-outline !py-2" onClick={() => act('approve_all', undefined, `Approve all ${pending.length} waiting uploads?`)}>
@@ -132,7 +152,27 @@ export default function AdminPage() {
           )}
         </div>
 
-        {tab === 'pending' ? (
+        {tab === 'guests' ? (
+          <div>
+            <button className="btn-outline mb-3 !py-2" onClick={downloadCsv} disabled={!guests.length}><Download className="h-4 w-4" />Download CSV</button>
+            <div className="overflow-x-auto rounded-2xl border border-gold/30 bg-white">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-parchment-50 text-xs uppercase text-cocoa/60">
+                  <tr><th className="px-4 py-3">Guest</th><th className="px-4 py-3">Table</th><th className="px-4 py-3">Phone</th></tr>
+                </thead>
+                <tbody className="divide-y divide-gold/20">
+                  {guests.map((g) => (
+                    <tr key={g.id}>
+                      <td className="px-4 py-2.5"><span className="flex items-center gap-2.5"><Avatar url={g.avatar_url} name={g.guest_name} size={34} />{g.guest_name}</span></td>
+                      <td className="px-4 py-2.5 text-ruby">{g.table_number}</td>
+                      <td className="px-4 py-2.5">{g.phone ? <a href={`tel:${g.phone}`} className="underline">{g.phone}</a> : <span className="text-cocoa/40">—</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : tab === 'pending' ? (
           pending.length === 0 ? (
             <p className="py-20 text-center font-display text-2xl italic text-cocoa/50">Nothing waiting. New uploads appear here automatically.</p>
           ) : (
@@ -143,7 +183,7 @@ export default function AdminPage() {
                   <div key={p.id} className="card-shadow overflow-hidden rounded-2xl border border-gold/40 bg-white">
                     <Media p={p} className="aspect-[4/5] w-full object-cover" />
                     <div className="p-3">
-                      <p className="text-sm font-medium">{p.profiles?.guest_name ?? 'Guest'} <span className="text-ruby">· Table {p.table_number}</span></p>
+                      <p className="flex items-center gap-2 text-sm font-medium"><Avatar url={p.profiles?.avatar_url} name={p.profiles?.guest_name ?? 'Guest'} size={26} />{p.profiles?.guest_name ?? 'Guest'} <span className="text-ruby">· Table {p.table_number}</span></p>
                       {p.caption && <p className="mt-1 font-display text-lg italic leading-snug">{p.caption}</p>}
                       <div className="mt-3 flex gap-2">
                         <button className="btn-ruby flex-1 !py-2.5" onClick={() => act('approve', p.id)}><Check className="h-4 w-4" />Approve</button>
@@ -163,7 +203,7 @@ export default function AdminPage() {
               <div key={p.id} className="overflow-hidden rounded-2xl border border-gold/30 bg-white">
                 <Media p={p} className="aspect-square w-full object-cover" />
                 <div className="p-2.5 text-xs">
-                  <p className="font-medium">{p.profiles?.guest_name ?? 'Guest'} · T{p.table_number}</p>
+                  <p className="flex items-center gap-1.5 font-medium"><Avatar url={p.profiles?.avatar_url} name={p.profiles?.guest_name ?? 'Guest'} size={22} />{p.profiles?.guest_name ?? 'Guest'} · T{p.table_number}</p>
                   {p.caption && <p className="mt-1 line-clamp-2 text-cocoa/70">{p.caption}</p>}
                   <div className="mt-2 flex items-center gap-1.5">
                     <button className="rounded-full bg-parchment-100 p-2" title="Move back to waiting" onClick={() => act('unapprove', p.id)}><Undo2 className="h-4 w-4" /></button>

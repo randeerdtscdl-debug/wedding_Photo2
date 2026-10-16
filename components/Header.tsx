@@ -1,6 +1,7 @@
 'use client';
-import { Presentation, UserRound } from 'lucide-react';
+import { Presentation } from 'lucide-react';
 import { useGuest } from './GuestProvider';
+import Avatar from './Avatar';
 
 export default function Header() {
   const { profile } = useGuest();
@@ -15,8 +16,8 @@ export default function Header() {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {profile && (
-            <div className="flex max-w-[9.5rem] items-center gap-1.5 rounded-full border border-gold/50 px-3 py-1.5 text-xs text-ivory">
-              <UserRound className="h-3.5 w-3.5 shrink-0 text-gold" aria-hidden />
+            <div className="flex max-w-[10.5rem] items-center gap-1.5 rounded-full border border-gold/50 py-1 pl-1 pr-3 text-xs text-ivory">
+              <Avatar url={profile.avatar_url} name={profile.guest_name} size={28} />
               <span className="truncate">{profile.guest_name} · T{profile.table_number}</span>
             </div>
           )}

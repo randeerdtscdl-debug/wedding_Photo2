@@ -83,13 +83,13 @@ export default function SlideshowPage() {
 
   const fetchOne = useCallback(async (id: string) => {
     const { data } = await supabase.from('posts').select(FEED_SELECT).eq('id', id).maybeSingle();
-    return data && data.is_approved ? normalize(data) : null;
+    return data && data.is_approved && data.media_type !== 'audio' ? normalize(data) : null;
   }, []);
 
   useEffect(() => {
     let alive = true;
     const loadAll = async (initial: boolean) => {
-      const { data } = await supabase.from('posts').select(FEED_SELECT).eq('is_approved', true)
+      const { data } = await supabase.from('posts').select(FEED_SELECT).eq('is_approved', true).in('media_type', ['image', 'video'])
         .order('created_at', { ascending: false }).limit(500);
       if (!alive) return;
       const rows = (data ?? []).map(normalize);
@@ -104,7 +104,7 @@ export default function SlideshowPage() {
 
     const ch = supabase.channel('slideshow')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, async (p) => {
-        if (!p.new.is_approved) return;
+        if (!p.new.is_approved || p.new.media_type === 'audio') return;
         const post = await fetchOne(p.new.id); if (post && alive) enqueue([post]);
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' }, async (p) => {

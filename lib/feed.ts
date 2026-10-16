@@ -1,11 +1,11 @@
 export const EVENT_WATERMARK = 'Umini & Randeera • 22 Oct 2026';
 
-export type MediaType = 'image' | 'video';
+export type MediaType = 'image' | 'video' | 'audio';
 
 export type FeedPost = {
   id: string;
   user_id: string;
-  image_url: string; // public URL of the photo OR video
+  image_url: string; // public URL of the photo, video OR voice recording
   storage_path: string;
   caption: string | null;
   table_number: string;
@@ -13,12 +13,14 @@ export type FeedPost = {
   is_approved: boolean;
   created_at: string;
   guest_name: string;
+  avatar_url: string | null;
+  duration_sec: number | null;
   like_count: number;
   comment_count: number;
 };
 
 export const FEED_SELECT =
-  'id,user_id,image_url,storage_path,caption,table_number,media_type,is_approved,created_at,profiles(guest_name),likes(count),comments(count)';
+  'id,user_id,image_url,storage_path,caption,table_number,media_type,duration_sec,is_approved,created_at,profiles(guest_name,avatar_url),likes(count),comments(count)';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function normalize(r: any): FeedPost {
@@ -29,10 +31,12 @@ export function normalize(r: any): FeedPost {
     storage_path: r.storage_path,
     caption: r.caption,
     table_number: r.table_number,
-    media_type: r.media_type === 'video' ? 'video' : 'image',
+    media_type: r.media_type === 'video' ? 'video' : r.media_type === 'audio' ? 'audio' : 'image',
+    duration_sec: r.duration_sec ?? null,
     is_approved: !!r.is_approved,
     created_at: r.created_at,
     guest_name: r.profiles?.guest_name ?? 'Guest',
+    avatar_url: r.profiles?.avatar_url ?? null,
     like_count: r.likes?.[0]?.count ?? 0,
     comment_count: r.comments?.[0]?.count ?? 0,
   };
@@ -46,4 +50,15 @@ export function timeAgo(iso: string) {
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
+}
+
+export function fmtDuration(sec: number) {
+  const s = Math.max(0, Math.round(sec));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/** Phone: keep digits and an optional leading +. Returns null when invalid. */
+export function cleanPhone(raw: string): string | null {
+  const v = raw.replace(/[\s\-()]/g, '');
+  return /^\+?\d{9,15}$/.test(v) ? v : null;
 }

@@ -1,5 +1,5 @@
 'use client';
-import { Hourglass } from 'lucide-react';
+import { Hourglass, Mic } from 'lucide-react';
 import { FeedPost } from '@/lib/feed';
 
 /** Shows the guest their own uploads that are still waiting for host approval. */
@@ -14,7 +14,9 @@ export default function PendingStrip({ posts }: { posts: FeedPost[] }) {
       </div>
       <div className="flex -space-x-2">
         {posts.slice(0, 4).map((p) =>
-          p.media_type === 'video' ? (
+          p.media_type === 'audio' ? (
+            <span key={p.id} className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-ivory bg-ruby-gradient text-gold-light"><Mic className="h-4 w-4" /></span>
+          ) : p.media_type === 'video' ? (
             <video key={p.id} src={`${p.image_url}#t=0.1`} muted playsInline preload="metadata"
               className="h-10 w-10 rounded-full border-2 border-ivory object-cover" />
           ) : (
