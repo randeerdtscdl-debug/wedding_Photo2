@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-tap-highlight-color: transparent; }
+  body { @apply bg-ivory font-sans text-cocoa antialiased; }
+  input, textarea, select { font-size: 16px; } /* stops iOS zoom on focus */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: #fafafa; }
+  ::-webkit-scrollbar-thumb { background: #8b0000; border-radius: 4px; }
+}
+
+@layer components {
+  .btn-ruby {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-ruby-gradient px-5 py-3 font-medium text-gold-light
+           shadow-md ring-1 ring-gold/60 transition active:scale-95 disabled:opacity-50 disabled:active:scale-100;
+  }
+  .btn-gold {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-gold-gradient px-5 py-3 font-medium text-ruby-dark
+           shadow-md transition active:scale-95 disabled:opacity-50 disabled:active:scale-100;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-gold/60 px-5 py-3 text-sm text-ruby
+           transition hover:bg-parchment-50 active:scale-95 disabled:opacity-50;
+  }
+  .field {
+    @apply w-full rounded-xl border border-gold/40 bg-white px-4 py-3 text-cocoa outline-none
+           placeholder:text-cocoa/40 focus:border-ruby focus:ring-2 focus:ring-ruby/15;
+  }
+  .card-shadow { box-shadow: 0 10px 40px -10px rgba(139, 0, 0, 0.15); }
+  .gold-rule { height: 1px; background: linear-gradient(90deg, transparent, #d4af37, transparent); }
+  .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
