@@ -1,18 +1,16 @@
 'use client';
 import { Hourglass, Mic } from 'lucide-react';
 import { FeedPost } from '@/lib/feed';
-import { useLang } from '@/lib/i18n';
 
 /** Shows the guest their own uploads that are still waiting for host approval. */
 export default function PendingStrip({ posts }: { posts: FeedPost[] }) {
-  const { t } = useLang();
   if (!posts.length) return null;
   return (
     <div className="mx-4 mb-3 flex items-center gap-3 rounded-2xl border border-gold/50 bg-parchment-50 p-3">
       <Hourglass className="h-5 w-5 shrink-0 text-gold-dark" aria-hidden />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">{posts.length === 1 ? t('pendingOne') : t('pendingMany', { n: posts.length })}</p>
-        <p className="text-xs text-cocoa/60">{t('pendingSub')}</p>
+        <p className="text-sm font-medium">{posts.length === 1 ? 'Your upload is' : `${posts.length} uploads are`} waiting for approval</p>
+        <p className="text-xs text-cocoa/60">It will appear in the feed as soon as the hosts approve it.</p>
       </div>
       <div className="flex -space-x-2">
         {posts.slice(0, 4).map((p) =>

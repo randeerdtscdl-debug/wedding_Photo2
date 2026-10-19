@@ -42,16 +42,14 @@ export function normalize(r: any): FeedPost {
   };
 }
 
-export function timeAgo(iso: string, lang: 'en' | 'si' = 'en') {
+export function timeAgo(iso: string) {
   const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
-  const si = lang === 'si';
-  if (s < 60) return si ? 'දැන්ම' : 'just now';
+  if (s < 60) return 'just now';
   const m = Math.floor(s / 60);
-  if (m < 60) return si ? `මිනිත්තු ${m}කට පෙර` : `${m}m ago`;
+  if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);
-  if (h < 24) return si ? `පැය ${h}කට පෙර` : `${h}h ago`;
-  const d = Math.floor(h / 24);
-  return si ? `දින ${d}කට පෙර` : `${d}d ago`;
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
 }
 
 export function fmtDuration(sec: number) {
