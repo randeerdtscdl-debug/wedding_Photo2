@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { uploadWithProgress } from '@/lib/uploadWithProgress';
 import { FEED_SELECT, FeedPost, fmtDuration, normalize } from '@/lib/feed';
 import { useGuest } from './GuestProvider';
+import { useLang } from '@/lib/i18n';
 import VoicePlayer from './VoicePlayer';
 
 const MAX_SEC = 120;           // recording limit
@@ -21,6 +22,7 @@ function pickMime() {
 
 export default function VoiceModal({ onClose, onUploaded }: { onClose: () => void; onUploaded: (p: FeedPost) => void }) {
   const { profile } = useGuest();
+  const { t } = useLang();
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [clip, setClip] = useState<{ blob: Blob; type: string; url: string; sec: number } | null>(null);
@@ -43,12 +45,12 @@ export default function VoiceModal({ onClose, onUploaded }: { onClose: () => voi
   async function start() {
     setErr('');
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      return setErr('Recording is not supported in this browser. Open the link in Chrome / Safari, or choose an audio file.');
+      return setErr(t('errNoRec'));
     }
     try {
       stream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
-      return setErr('Microphone permission was denied. Please allow the microphone and try again.');
+      return setErr(t('errMic'));
     }
     const mime = pickMime();
     const r = new MediaRecorder(stream.current, mime ? { mimeType: mime } : undefined);
@@ -80,17 +82,17 @@ export default function VoiceModal({ onClose, onUploaded }: { onClose: () => voi
   function pickFile(f: File | undefined) {
     if (!f) return;
     setErr('');
-    if (f.size > MAX_FILE_MB * 1024 * 1024) return setErr(`That file is over ${MAX_FILE_MB} MB.`);
+    if (f.size > MAX_FILE_MB * 1024 * 1024) return setErr(t('errFileBig', { mb: MAX_FILE_MB }));
     const type = EXT[f.type] ? f.type : f.name.toLowerCase().endsWith('.m4a') ? 'audio/x-m4a' : '';
-    if (!type) return setErr('Please choose an mp3 / m4a / wav / webm audio file.');
+    if (!type) return setErr(t('errBadAudio'));
     const url = URL.createObjectURL(f);
     const a = new Audio(url);
     a.onloadedmetadata = () => {
       const sec = Number.isFinite(a.duration) ? Math.round(a.duration) : 0;
-      if (sec > 300) { URL.revokeObjectURL(url); return setErr('Please keep voice wishes under 5 minutes.'); }
+      if (sec > 300) { URL.revokeObjectURL(url); return setErr(t('errTooLong')); }
       setClip({ blob: f, type, url, sec: Math.max(1, sec) });
     };
-    a.onerror = () => { URL.revokeObjectURL(url); setErr('Could not read that audio file.'); };
+    a.onerror = () => { URL.revokeObjectURL(url); setErr(t('errCantRead')); };
   }
 
   async function send() {
@@ -109,7 +111,7 @@ export default function VoiceModal({ onClose, onUploaded }: { onClose: () => voi
       onClose();
     } catch (e) {
       console.error(e);
-      setErr('Upload failed. Check your connection and try again.');
+      setErr(t('uploadFailed'));
       setBusy(false);
     }
   }
@@ -120,8 +122,8 @@ export default function VoiceModal({ onClose, onUploaded }: { onClose: () => voi
       <div onClick={(e) => e.stopPropagation()}
         className="safe-bottom max-h-[92vh] w-full max-w-md animate-sheetUp overflow-y-auto rounded-t-3xl bg-ivory p-5 shadow-2xl sm:rounded-3xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-serif text-xl text-ruby">Leave a voice wish</h2>
-          <button onClick={onClose} disabled={busy || recording} aria-label="Close"><X className="h-5 w-5" /></button>
+          <h2 className="font-serif text-xl text-ruby">{t('voiceTitle')}</h2>
+          <button onClick={onClose} disabled={busy || recording} aria-label={t('close')}><X className="h-5 w-5" /></button>
         </div>
 
         {!clip ? (
@@ -130,23 +132,23 @@ export default function VoiceModal({ onClose, onUploaded }: { onClose: () => voi
               <>
                 <span className="relative flex h-20 w-20 items-center justify-center">
                   <span className="absolute inset-0 animate-ping rounded-full bg-ruby/30" />
-                  <button onClick={stop} aria-label="Stop recording"
+                  <button onClick={stop} aria-label={t('stopAria')}
                     className="relative flex h-20 w-20 items-center justify-center rounded-full bg-ruby-gradient text-gold-light shadow-lg ring-2 ring-gold">
                     <Square className="h-7 w-7 fill-current" />
                   </button>
                 </span>
                 <p className="font-serif text-2xl tabular-nums text-ruby">{fmtDuration(elapsed)}</p>
-                <p className="text-xs text-cocoa/60">Recording… tap to stop (max {fmtDuration(MAX_SEC)})</p>
+                <p className="text-xs text-cocoa/60">{t('recordingHint', { max: fmtDuration(MAX_SEC) })}</p>
               </>
             ) : (
               <>
-                <button onClick={start} aria-label="Start recording"
+                <button onClick={start} aria-label={t('startAria')}
                   className="flex h-20 w-20 items-center justify-center rounded-full bg-ruby-gradient text-gold-light shadow-lg ring-2 ring-gold active:scale-95">
                   <Mic className="h-8 w-8" />
                 </button>
-                <p className="text-sm font-medium text-ruby">Tap to record your wish</p>
+                <p className="text-sm font-medium text-ruby">{t('tapRecord')}</p>
                 <button type="button" className="text-xs text-cocoa/60 underline" onClick={() => fileInput.current?.click()}>
-                  or choose an audio file
+                  {t('chooseAudio')}
                 </button>
                 <input ref={fileInput} type="file" accept="audio/*" hidden onChange={(e) => { pickFile(e.target.files?.[0]); e.target.value = ''; }} />
               </>
@@ -157,19 +159,19 @@ export default function VoiceModal({ onClose, onUploaded }: { onClose: () => voi
             <VoicePlayer src={clip.url} durationSec={clip.sec} seed={clip.url} />
             {!busy && (
               <button className="mt-2 flex items-center gap-1.5 text-xs text-cocoa/60" onClick={() => setClip(null)}>
-                <Trash2 className="h-3.5 w-3.5" />Record again
+                <Trash2 className="h-3.5 w-3.5" />{t('recordAgain')}
               </button>
             )}
           </div>
         )}
 
         <textarea className="field mt-4 resize-none" rows={2} maxLength={280} value={caption}
-          onChange={(e) => setCaption(e.target.value)} placeholder="Add a written wish too (optional)" />
-        <p className="mt-3 text-xs text-cocoa/60">The hosts review every wish before it appears in the gallery.</p>
+          onChange={(e) => setCaption(e.target.value)} placeholder={t('writtenWish')} />
+        <p className="mt-3 text-xs text-cocoa/60">{t('reviewWish')}</p>
         {err && <p className="mt-3 text-sm text-ruby">{err}</p>}
 
         <button className="btn-ruby mt-5 w-full" disabled={busy || !clip} onClick={send}>
-          {busy ? <><Loader2 className="h-4 w-4 animate-spin" />Uploading · {progress}%</> : <><Upload className="h-4 w-4" />Send for approval</>}
+          {busy ? <><Loader2 className="h-4 w-4 animate-spin" />{t('uploadingPct', { p: progress })}</> : <><Upload className="h-4 w-4" />{t('sendApproval')}</>}
         </button>
       </div>
     </div>

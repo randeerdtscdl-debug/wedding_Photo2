@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { supabase, BUCKET } from '@/lib/supabaseClient';
 
 export type Profile = { id: string; guest_name: string; table_number: string; avatar_url: string | null };
-export type RegisterInput = { name: string; table: string; phone: string; avatar: Blob | null };
+export type RegisterInput = { name: string; table: string; phone: string; avatar: Blob | null; avatarUrl?: string | null; claim?: boolean };
 type Ctx = {
   profile: Profile | null;
   ready: boolean;
@@ -33,7 +33,7 @@ export function GuestProvider({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, []);
 
-  const register = useCallback(async ({ name, table, phone, avatar }: RegisterInput) => {
+  const register = useCallback(async ({ name, table, phone, avatar, avatarUrl, claim }: RegisterInput) => {
     let { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       const { data, error } = await supabase.auth.signInAnonymously();
@@ -42,8 +42,17 @@ export function GuestProvider({ children }: { children: React.ReactNode }) {
     }
     const uid = session.user.id;
 
+    // Guest confirmed "yes, that's me" → take over their old identity (posts, likes, comments)
+    if (claim) try {
+      await fetch('/api/guest/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ phone }),
+      });
+    } catch { /* offline → continue as new guest */ }
+
     // keep the old picture if the guest is only completing missing details
-    let avatar_url: string | null = profile?.avatar_url ?? null;
+    let avatar_url: string | null = avatarUrl ?? profile?.avatar_url ?? null;
     if (avatar) {
       const path = `${uid}/avatar-${Date.now()}.jpg`;
       const { error: upErr } = await supabase.storage.from(BUCKET)

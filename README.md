@@ -12,6 +12,13 @@ Next.js 14 (App Router) · Tailwind 3 · Supabase (Auth anonymous, DB, Storage, 
 - Host dashboard: voice playback, **Guests** tab (name / table / phone) + CSV download
 - Slideshow still shows photos & videos only
 
+- **Returning guests**: the join form stays the same (picture, name, table, phone). When the phone number is already
+  registered, a popup asks "You've already joined as <name> — is this you?". "Yes" signs them straight back in (works
+  after clearing cache or on a new phone) and keeps their old posts, comments and likes; "No" lets them register normally.
+
+- **English / සිංහල**: a language button in the header (and on the join screen) switches the whole guest site.
+  The choice is remembered on the guest's phone. Texts live in `lib/i18n.tsx`.
+
 ## Setup
 1. `npm install`
 2. `.env.local` (5 variables — see `.env.example`)

@@ -42,14 +42,16 @@ export function normalize(r: any): FeedPost {
   };
 }
 
-export function timeAgo(iso: string) {
+export function timeAgo(iso: string, lang: 'en' | 'si' = 'en') {
   const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
-  if (s < 60) return 'just now';
+  const si = lang === 'si';
+  if (s < 60) return si ? 'දැන්ම' : 'just now';
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
+  if (m < 60) return si ? `මිනිත්තු ${m}කට පෙර` : `${m}m ago`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+  if (h < 24) return si ? `පැය ${h}කට පෙර` : `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return si ? `දින ${d}කට පෙර` : `${d}d ago`;
 }
 
 export function fmtDuration(sec: number) {
@@ -57,8 +59,4 @@ export function fmtDuration(sec: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-/** Phone: keep digits and an optional leading +. Returns null when invalid. */
-export function cleanPhone(raw: string): string | null {
-  const v = raw.replace(/[\s\-()]/g, '');
-  return /^\+?\d{9,15}$/.test(v) ? v : null;
-}
+export { cleanPhone, normalizePhone } from './phone';
