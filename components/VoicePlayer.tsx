@@ -13,7 +13,7 @@ function bars(seed: string, n = 36) {
 }
 
 export default function VoicePlayer({ src, durationSec, seed }: { src: string; durationSec: number | null; seed: string }) {
-  const { t } = useLang();
+  const { t: tr } = useLang();
   const audio = useRef<HTMLAudioElement>(null);
   const [on, setOn] = useState(false);
   const [t, setT] = useState(0);
@@ -40,7 +40,7 @@ export default function VoicePlayer({ src, durationSec, seed }: { src: string; d
       <audio ref={audio} src={src} preload="none"
         onPlay={() => setOn(true)} onPause={() => setOn(false)}
         onEnded={() => { setOn(false); setT(0); }} onTimeUpdate={(e) => setT(e.currentTarget.currentTime)} />
-      <button type="button" onClick={toggle} aria-label={on ? t('pauseVoice') : t('playVoice')}
+      <button type="button" onClick={toggle} aria-label={on ? tr('pauseVoice') : tr('playVoice')}
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ruby-gradient text-gold-light shadow ring-1 ring-gold/60 active:scale-95">
         {on ? <Pause className="h-5 w-5" /> : <Play className="ml-0.5 h-5 w-5" />}
       </button>
