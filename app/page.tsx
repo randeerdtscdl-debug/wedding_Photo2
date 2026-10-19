@@ -4,6 +4,7 @@ import { Camera, Film, ImageOff, Loader2, Mic, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { FEED_SELECT, FeedPost, normalize } from '@/lib/feed';
 import { useGuest } from '@/components/GuestProvider';
+import { useLang } from '@/lib/i18n';
 import Header from '@/components/Header';
 import FilterBar, { Sort } from '@/components/FilterBar';
 import PhotoCard from '@/components/PhotoCard';
@@ -20,6 +21,7 @@ type Tab = 'media' | 'voice';
 
 function Feed() {
   const { profile } = useGuest();
+  const { t } = useLang();
   const userId = useRef<string | null>(null);
   userId.current = profile?.id ?? null;
 
@@ -94,7 +96,7 @@ function Feed() {
           if (!post) return;
           addPost(post);
           setPending((prev) => prev.filter((x) => x.id !== id));
-          if (mine) showNotice('Your upload was approved and is now in the gallery.');
+          if (mine) showNotice(t('noticeApproved'));
         } else {                              // host moved it back to pending
           setPosts((prev) => prev.filter((x) => x.id !== id));
           if (mine) { const post = await fetchOne(id); if (post) setPending((prev) => (prev.some((x) => x.id === id) ? prev : [post, ...prev])); }
@@ -116,7 +118,7 @@ function Feed() {
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [addPost, bump, showNotice]);
+  }, [addPost, bump, showNotice, t]);
 
   async function toggleLike(post: FeedPost) {
     if (!profile) return;
@@ -134,8 +136,8 @@ function Feed() {
 
   const onUploaded = useCallback((p: FeedPost) => {
     setPending((prev) => (prev.some((x) => x.id === p.id) ? prev : [p, ...prev]));
-    showNotice(p.media_type === 'audio' ? 'Thank you! Your voice wish is waiting for the hosts to approve it.' : 'Thank you! Your upload is waiting for the hosts to approve it.');
-  }, [showNotice]);
+    showNotice(p.media_type === 'audio' ? t('thanksVoice') : t('thanksMedia'));
+  }, [showNotice, t]);
 
   const isVoice = (p: FeedPost) => p.media_type === 'audio';
   const tabPosts = useMemo(() => posts.filter((p) => (tab === 'voice') === isVoice(p)), [posts, tab]);
@@ -162,10 +164,10 @@ function Feed() {
         <div className="px-4 pt-3">
           <div className="flex rounded-full border border-gold/50 bg-white p-1">
             <button className={tabCls(tab === 'media')} onClick={() => { setTab('media'); setTable(''); }}>
-              <Film className="h-4 w-4" />Photos &amp; Videos <span className="text-xs opacity-70">{counts.media}</span>
+              <Film className="h-4 w-4" />{t('tabMedia')} <span className="text-xs opacity-70">{counts.media}</span>
             </button>
             <button className={tabCls(tab === 'voice')} onClick={() => { setTab('voice'); setTable(''); }}>
-              <Mic className="h-4 w-4" />Voice Wishes <span className="text-xs opacity-70">{counts.voice}</span>
+              <Mic className="h-4 w-4" />{t('tabVoice')} <span className="text-xs opacity-70">{counts.voice}</span>
             </button>
           </div>
         </div>
@@ -177,8 +179,8 @@ function Feed() {
           ) : visible.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-24 text-center text-cocoa/60">
               <ImageOff className="h-10 w-10 text-gold" />
-              <p className="font-serif text-xl text-ruby">Nothing here yet</p>
-              <p className="font-display text-lg italic">{tab === 'voice' ? 'Be the first to leave a voice wish.' : 'Be the first to share a moment.'}</p>
+              <p className="font-serif text-xl text-ruby">{t('nothing')}</p>
+              <p className="font-display text-lg italic">{tab === 'voice' ? t('emptyVoice') : t('emptyMedia')}</p>
             </div>
           ) : (
             tab === 'voice' ? (
@@ -197,7 +199,7 @@ function Feed() {
           )}
           {hasMore && !loading && (
             <div className="mt-4 flex justify-center">
-              <button className="btn-outline" onClick={() => loadPage(posts.length)}>Load more</button>
+              <button className="btn-outline" onClick={() => loadPage(posts.length)}>{t('loadMore')}</button>
             </div>
           )}
         </div>
@@ -210,7 +212,7 @@ function Feed() {
       )}
 
       <button onClick={() => (profile ? (tab === 'voice' ? setVoiceOpen(true) : setUploadOpen(true)) : null)}
-        aria-label={tab === 'voice' ? 'Record a voice wish' : 'Upload photo or video'}
+        aria-label={tab === 'voice' ? t('fabVoice') : t('fabMedia')}
         className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-5 z-40 flex h-16 w-16 items-center justify-center rounded-full bg-ruby-gradient text-gold-light shadow-xl shadow-ruby/40 ring-2 ring-gold active:scale-95">
         {tab === 'voice' ? <Mic className="h-7 w-7" /> : <Camera className="h-7 w-7" />}
       </button>

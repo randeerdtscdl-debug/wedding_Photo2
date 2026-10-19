@@ -15,8 +15,8 @@ const config: Config = {
         cocoa: '#2B1010',
       },
       fontFamily: {
-        serif: ['var(--font-playfair)', 'Georgia', 'serif'],
-        display: ['var(--font-cormorant)', 'Georgia', 'serif'],
+        serif: ['var(--font-playfair)', 'var(--font-sinhala)', 'Georgia', 'serif'],
+        display: ['var(--font-cormorant)', 'var(--font-sinhala)', 'Georgia', 'serif'],
         sans: ['var(--font-inter)', 'var(--font-sinhala)', 'system-ui', 'sans-serif'],
       },
       backgroundImage: {

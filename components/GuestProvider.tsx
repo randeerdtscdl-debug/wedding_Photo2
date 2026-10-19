@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { supabase, BUCKET } from '@/lib/supabaseClient';
 
 export type Profile = { id: string; guest_name: string; table_number: string; avatar_url: string | null };
-export type RegisterInput = { name: string; table: string; phone: string; avatar: Blob | null; avatarUrl?: string | null };
+export type RegisterInput = { name: string; table: string; phone: string; avatar: Blob | null; avatarUrl?: string | null; claim?: boolean };
 type Ctx = {
   profile: Profile | null;
   ready: boolean;
@@ -33,7 +33,7 @@ export function GuestProvider({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, []);
 
-  const register = useCallback(async ({ name, table, phone, avatar, avatarUrl }: RegisterInput) => {
+  const register = useCallback(async ({ name, table, phone, avatar, avatarUrl, claim }: RegisterInput) => {
     let { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       const { data, error } = await supabase.auth.signInAnonymously();
@@ -42,8 +42,8 @@ export function GuestProvider({ children }: { children: React.ReactNode }) {
     }
     const uid = session.user.id;
 
-    // Returning guest? (same phone number already registered) → take over their old identity
-    try {
+    // Guest confirmed "yes, that's me" → take over their old identity (posts, likes, comments)
+    if (claim) try {
       await fetch('/api/guest/claim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
