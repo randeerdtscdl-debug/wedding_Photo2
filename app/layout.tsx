@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next';
 import { Playfair_Display, Cormorant_Garamond, Inter, Noto_Sans_Sinhala } from 'next/font/google';
 import './globals.css';
 import { GuestProvider } from '@/components/GuestProvider';
-import { LangProvider } from '@/lib/i18n';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-playfair', display: 'swap' });
 const cormorant = Cormorant_Garamond({ subsets: ['latin'], weight: ['400', '500', '600'], style: ['normal', 'italic'], variable: '--font-cormorant', display: 'swap' });
@@ -19,7 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${playfair.variable} ${cormorant.variable} ${inter.variable} ${sinhala.variable}`}>
       <body>
-        <LangProvider><GuestProvider>{children}</GuestProvider></LangProvider>
+        <GuestProvider>{children}</GuestProvider>
       </body>
     </html>
   );
